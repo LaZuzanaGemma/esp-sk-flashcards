@@ -250,6 +250,26 @@
     font-size: .75rem; color: var(--muted); text-align: center; margin-top: 10px;
   }
 
+  /* ── Direction toggle ── */
+  .dir-toggle {
+    display: flex; align-items: center;
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden; flex-shrink: 0;
+  }
+  .dir-btn {
+    padding: 7px 11px; font-size: .75rem; font-weight: 500;
+    cursor: pointer; border: none; background: none;
+    color: var(--muted); transition: all .18s; white-space: nowrap;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .dir-btn.active {
+    background: var(--surface); color: var(--text);
+    box-shadow: inset 0 0 0 1px var(--border);
+  }
+  .dir-btn.active.es { color: var(--accent-es); }
+  .dir-btn.active.sk { color: var(--accent-sk); }
+  .dir-sep { color: var(--border); font-size: .8rem; pointer-events: none; user-select: none; }
+
   /* ── ADD / EDIT modal ── */
   .overlay {
     display: none; position: fixed; inset: 0; z-index: 100;
@@ -362,6 +382,11 @@
   <!-- ── PRACTICE ── -->
   <div class="panel" id="panel-practice">
     <div class="practice-controls">
+      <div class="dir-toggle">
+        <button class="dir-btn active es" id="dirES" onclick="setDirection('es')">ES → SK</button>
+        <span class="dir-sep">|</span>
+        <button class="dir-btn sk" id="dirSK" onclick="setDirection('sk')">SK → ES</button>
+      </div>
       <button class="btn" onclick="shuffleDeck()">
         <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5"/></svg>
         Shuffle
@@ -377,14 +402,14 @@
       <div class="flipcard" id="flipcard" onclick="flipCard()">
         <div class="face front">
           <div class="face-serial" id="faceSerial">#001</div>
-          <div class="face-lang">Español</div>
-          <div class="face-word" id="faceES">—</div>
+          <div class="face-lang" id="faceFrontLang">Español</div>
+          <div class="face-word" id="faceFront">—</div>
           <div class="face-hint">tap to reveal</div>
         </div>
         <div class="face back">
           <div class="face-serial" id="faceSerialB">#001</div>
-          <div class="face-lang">Slovenčina</div>
-          <div class="face-word" id="faceSK">—</div>
+          <div class="face-lang" id="faceBackLang">Slovenčina</div>
+          <div class="face-word" id="faceBack">—</div>
         </div>
       </div>
     </div>
@@ -588,7 +613,24 @@ function deleteCard(id) {
 }
 
 // ── PRACTICE ─────────────────────────────────────────────
-let deck = [], deckIdx = 0;
+let deck = [], deckIdx = 0, practiceDir = 'es'; // 'es' = ES→SK, 'sk' = SK→ES
+
+function setDirection(dir) {
+  practiceDir = dir;
+  document.getElementById('dirES').classList.toggle('active', dir === 'es');
+  document.getElementById('dirSK').classList.toggle('active', dir === 'sk');
+  // Update card face colors to match direction
+  const front = document.querySelector('.face.front');
+  const back  = document.querySelector('.face.back');
+  if (dir === 'es') {
+    front.style.borderColor = 'rgba(200,169,110,.2)';
+    back.style.borderColor  = 'rgba(110,158,200,.2)';
+  } else {
+    front.style.borderColor = 'rgba(110,158,200,.2)';
+    back.style.borderColor  = 'rgba(200,169,110,.2)';
+  }
+  renderPractice();
+}
 
 function initPractice() {
   deck = [...loadCards()];
@@ -614,18 +656,24 @@ function flipCard() {
 function renderPractice() {
   document.getElementById('flipcard').classList.remove('flipped');
   if (deck.length === 0) {
-    document.getElementById('faceES').textContent = '—';
-    document.getElementById('faceSK').textContent = '—';
+    document.getElementById('faceFront').textContent = '—';
+    document.getElementById('faceBack').textContent  = '—';
     document.getElementById('practiceEmpty').textContent = 'Add some cards first!';
     document.getElementById('progressLabel').textContent = '0 / 0';
     document.getElementById('progressBar').style.width = '0%';
     return;
   }
   const c = deck[deckIdx];
-  document.getElementById('faceES').textContent = c.es;
-  document.getElementById('faceSK').textContent = c.sk;
+  const isES = practiceDir === 'es';
+  document.getElementById('faceFrontLang').textContent = isES ? 'Español'    : 'Slovenčina';
+  document.getElementById('faceBackLang').textContent  = isES ? 'Slovenčina' : 'Español';
+  document.getElementById('faceFront').textContent     = isES ? c.es : c.sk;
+  document.getElementById('faceBack').textContent      = isES ? c.sk : c.es;
+  // Front word colour
+  document.getElementById('faceFront').style.color = isES ? 'var(--accent-es)' : 'var(--accent-sk)';
+  document.getElementById('faceBack').style.color  = isES ? 'var(--accent-sk)' : 'var(--accent-es)';
   const serial = '#' + String(c.serial).padStart(3, '0');
-  document.getElementById('faceSerial').textContent = serial;
+  document.getElementById('faceSerial').textContent  = serial;
   document.getElementById('faceSerialB').textContent = serial;
   document.getElementById('progressLabel').textContent = `${deckIdx + 1} / ${deck.length}`;
   document.getElementById('progressBar').style.width = ((deckIdx + 1) / deck.length * 100) + '%';
